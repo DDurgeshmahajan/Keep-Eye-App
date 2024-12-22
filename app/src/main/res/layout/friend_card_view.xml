@@ -55,6 +55,15 @@
                 android:backgroundTint="@color/primary"
                 android:text="Watch"
                 android:textColor="@android:color/white" />
+            <Button
+                android:id="@+id/btnnotify"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/primary"
+                android:text="Notify"
+                android:textColor="@android:color/white"
+                android:layout_margin="3dp"/>
+
         </LinearLayout>
 
         <!-- Second row: Additional details -->

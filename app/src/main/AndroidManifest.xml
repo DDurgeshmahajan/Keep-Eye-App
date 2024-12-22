@@ -3,6 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".MyApp"
@@ -15,6 +22,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.KeepEye"
         tools:targetApi="31">
+
+
+        <service android:name=".LocationService" android:foregroundServiceType="location"
+            tools:ignore="ForegroundServicePermission" />
+
+
         <activity
             android:name=".first_screen_name"
             android:exported="true">
@@ -32,5 +45,6 @@
             android:exported="false">
         </activity>
     </application>
+
 
 </manifest>

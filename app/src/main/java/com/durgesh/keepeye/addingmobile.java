@@ -8,6 +8,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -262,6 +263,7 @@ public class addingmobile extends AppCompatActivity {
         }
 
         public String getCurrentUserId(){
+
             SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
             String userid2= sp.getString("user_id","0");
             return userid2;
