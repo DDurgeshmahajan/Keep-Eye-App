@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     String friendname;
     TextView thisid, thisid2;
     SharedPreferences sharedPreferences;
+    private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +61,15 @@ public class MainActivity extends AppCompatActivity {
         setClipboardListener(thisid);
         setClipboardListener(thisid2);
 
-        loadFriendsList();
+//        loadFriendsList();
 
+        preferenceChangeListener = (sharedPreferences, key) -> {
+            if (key.equals("friends")) {
+                loadFriendsList(); // Reload the friends list when 'friends' key changes
+            }
+        };
+
+        sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
         // Save name changes in real-time
         thisname.addTextChangedListener(new TextWatcher() {
             @Override
