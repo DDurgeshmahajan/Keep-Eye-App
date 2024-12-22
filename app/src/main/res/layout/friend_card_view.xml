@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardview1"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:background="?attr/selectableItemBackground"
+    android:padding="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- Top row: Icon and editable name -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Phone icon -->
+            <ImageView
+                android:id="@+id/iconPhone"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Phone Icon"
+                android:src="@drawable/ic_phone" />
+
+            <!-- Editable name -->
+            <EditText
+                android:id="@+id/ableName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:inputType="textPersonName"
+                android:padding="4dp"
+                android:singleLine="true"
+                android:text="name"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- Button (Watch) -->
+            <Button
+                android:id="@+id/btnWatch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/primary"
+                android:text="Watch"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+
+        <!-- Second row: Additional details -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+            <!-- Date added -->
+            <TextView
+                android:id="@+id/thisid1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Date Added: N/A"
+                android:textColor="@color/gray"
+                android:textSize="14sp" />
+
+            <!-- Last checked status -->
+            <TextView
+                android:id="@+id/lastCheckedStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Last Checked: Not Checked"
+                android:textColor="@color/gray"
+                android:textSize="14sp" />
+
+            <!-- Device availability -->
+            <TextView
+                android:id="@+id/deviceAvailability"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Device Status: Unavailable"
+                android:textColor="@color/gray"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
+
