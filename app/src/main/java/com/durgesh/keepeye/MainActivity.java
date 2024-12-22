@@ -177,6 +177,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (preferenceChangeListener != null) {
+            sharedPreferences.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
+        }
         sharedPreferences.edit()
                 .putString("namethis", thisname.getText().toString())
                 .apply();
