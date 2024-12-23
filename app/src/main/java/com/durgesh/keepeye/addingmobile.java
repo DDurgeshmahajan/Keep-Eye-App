@@ -263,7 +263,6 @@ public class addingmobile extends AppCompatActivity {
         }
 
         public String getCurrentUserId(){
-
             SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
             String userid2= sp.getString("user_id","0");
             return userid2;

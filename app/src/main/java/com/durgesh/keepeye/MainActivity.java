@@ -51,10 +51,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Intent serviceIntent = new Intent(this, LocationService.class);
-        serviceIntent.setAction("ACTION_LISTEN_UPDATES");
-        serviceIntent.putExtra("myId", getnamefunco.getCurrentUserId());
-        startService(serviceIntent);
+        try{
+            Intent serviceIntent = new Intent(this, LocationService.class);
+            serviceIntent.setAction("ACTION_LISTEN_UPDATES");
+            serviceIntent.putExtra("myId", getnamefunco.getCurrentUserId());
+            startService(serviceIntent);
+        }catch (Exception e){
+
+        }
+
 
         thisname = findViewById(R.id.thisableName);
         thisid = findViewById(R.id.thisid);
