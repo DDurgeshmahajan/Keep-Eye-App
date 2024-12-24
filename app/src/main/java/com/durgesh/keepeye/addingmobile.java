@@ -202,21 +202,28 @@ public class addingmobile extends AppCompatActivity {
 
         // Retrieve current friends list
         String friendsJson = sharedPreferences.getString("friends", "[]");
-        JSONArray friendsArray = null;
+        JSONArray friendsArray;
         try {
             friendsArray = new JSONArray(friendsJson);
-        } catch (JSONException e) {
-            Log.d("TAG", "saveFriendLocally: "+e.getMessage());
-        }
 
-        // Add new friend
-        JSONObject friendObject = new JSONObject();
-        try {
+            // Ensure the friend is not already in the list
+            for (int i = 0; i < friendsArray.length(); i++) {
+                JSONObject friendObject = friendsArray.getJSONObject(i);
+                if (friendObject.getString("id").equals(friendId)) {
+                    Log.d("TAG", "Friend already exists: " + friendId);
+                    return; // Avoid duplication
+                }
+            }
+
+            // Add new friend
+            JSONObject friendObject = new JSONObject();
             friendObject.put("id", friendId);
             friendObject.put("name", friendName);
             friendsArray.put(friendObject);
+
         } catch (JSONException e) {
-            e.printStackTrace();
+            friendsArray = new JSONArray();
+            Log.e("TAG", "Error creating friends JSON: " + e.getMessage());
         }
 
         // Save updated friends list

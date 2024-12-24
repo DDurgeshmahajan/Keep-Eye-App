@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
         setClipboardListener(thisid);
         setClipboardListener(thisid2);
 
-//        loadFriendsList();
+        loadFriendsList();
 
         preferenceChangeListener = (sharedPreferences, key) -> {
             if (key.equals("friends")) {
@@ -154,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
     private void loadFriendsList() {
         String friendsJson = sharedPreferences.getString("friends", "[]");
         List<Friend> friendsList = new ArrayList<>();
-
+        Log.d("listerror", "loadFriendsList: "+friendsList);
         try {
             JSONArray friendsArray = new JSONArray(friendsJson);
             for (int i = 0; i < friendsArray.length(); i++) {
@@ -163,9 +163,10 @@ public class MainActivity extends AppCompatActivity {
                 String friendName = friendObject.getString("name");
 
                 friendsList.add(new Friend(friendId, friendName));
+                Log.d("listerror", "loadFriendsList: "+friendsList);
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            Log.d("listerror", "loadFriendsList: "+friendsList);
         }
 
         updateFriendsUI(friendsList);
@@ -176,6 +177,7 @@ public class MainActivity extends AppCompatActivity {
         container.removeAllViews();
 
         for (Friend friend : friendsList) {
+
             View cardView = LayoutInflater.from(this).inflate(R.layout.friend_card_view, container, false);
 
             EditText nameEditText = cardView.findViewById(R.id.ableName);
@@ -185,23 +187,21 @@ public class MainActivity extends AppCompatActivity {
             watchButton.setOnClickListener(v -> {
                 // Watch button functionality
             });
-            notifyButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-                    Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
-                    sendLocationIntent.setAction("ACTION_SEND_LOCATION");
-                    sendLocationIntent.putExtra("friendId", idTextView.getText().toString());
-//                    startService(sendLocationIntent);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        startForegroundService ( sendLocationIntent );
-                    } else {
-                        startService ( sendLocationIntent );
-                    }
-
-
-                }
-            });
+//            notifyButton.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//
+//                    Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
+//                    sendLocationIntent.setAction("ACTION_SEND_LOCATION");
+//                    sendLocationIntent.putExtra("friendId", idTextView.getText().toString());
+////                    startService(sendLocationIntent);
+//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                        startForegroundService ( sendLocationIntent );
+//                    } else {
+//                        startService ( sendLocationIntent );
+//                    }
+//                }
+//            });
 
             cardView.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
@@ -255,14 +255,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void removeFriendFromDatabase(String id) {
 
+        SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
+        String userid2= sp.getString("user_id","0");
         DocumentReference currentUserFriendDoc = db3.collection("users")
-                .document(getnamefunco.getCurrentUserId())
+                .document(userid2)
                 .collection("friends")
                 .document(id);
         DocumentReference friendUserFriendDoc = db3.collection("users")
                 .document(id)
                 .collection("friends")
-                .document(getnamefunco.getCurrentUserId());
+                .document(userid2);
         try {
             currentUserFriendDoc.delete();
             friendUserFriendDoc.delete();

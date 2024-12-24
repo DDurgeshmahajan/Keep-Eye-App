@@ -97,7 +97,8 @@ public class LocationService extends Service {
                     }
                     if (snapshot != null && snapshot.exists()) {
                         boolean isLocalChange = snapshot.getMetadata().hasPendingWrites(); // Check if this is a local change
-                        if (!isLocalChange) { // Ignore local changes
+                        boolean isLocalChange2 = snapshot.getMetadata().isFromCache(); // Check if this is a local change
+                        if (isLocalChange && isLocalChange2) { // Ignore local changes
                             Object location = snapshot.get("location");
                             if (location != null) {
                                 sendNotification("Location Update", "Your location has been updated!");
