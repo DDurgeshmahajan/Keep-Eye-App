@@ -8,9 +8,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -88,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         // Restore and display user ID
         thisid.setText(sharedPreferences.getString("user_id", "0"));
         setClipboardListener(thisid);
-        setClipboardListener(thisid2);
+//        setClipboardListener(thisid);
 
         loadFriendsList();
 
@@ -214,21 +214,41 @@ public class MainActivity extends AppCompatActivity {
             nameEditText.setText(friend.getName());
             idTextView.setText("ID: " + friend.getId());
 
-            nameEditText.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            container.addView(cardView);
 
+            nameEditText.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-                @Override
-                public void afterTextChanged(Editable s) {
-                    updateFriendInPreferences(friend.getId(), s.toString());
+                public void onClick(View v) {
+                   showEditNameDialog(friend,nameEditText);
                 }
             });
 
-            container.addView(cardView);
+
+
         }
+    }
+    // Method to show edit name dialog
+    private void showEditNameDialog(Friend friend, TextView nameTextView) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Edit Name");
+
+        // Create EditText for input
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setText(friend.getName());
+
+        builder.setView(input);
+
+        // Set "OK" button
+        builder.setPositiveButton("OK", (dialog, which) -> {
+            String newName = input.getText().toString();
+            nameTextView.setText(newName); // Update TextView
+            updateFriendInPreferences(friend.getId(), newName); // Update SharedPreferences
+        });
+        // Set "Cancel" button
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+        // Show dialog
+        builder.show();
     }
     private void showRemoveFriendDialog(Friend friend, View cardView, LinearLayout container) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -299,10 +319,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-
     private void updateFriendInPreferences(String friendId, String newName) {
         try {
+//            Toast.makeText(this, "here", Toast.LENGTH_SHORT).show();
+
             String friendsJson = sharedPreferences.getString("friends", "[]");
             JSONArray friendsArray = new JSONArray(friendsJson);
 
@@ -313,11 +333,11 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 }
             }
-
             sharedPreferences.edit()
                     .putString("friends", friendsArray.toString())
                     .apply();
 
+//            nameEditText.setFocusable(true);
         } catch (JSONException e) {
             e.printStackTrace();
         }

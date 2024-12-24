@@ -12,6 +12,7 @@ public class Friend {
     public String getId() {
         return id;
     }
+    public String setName() { return  name; }
 
     public String getName() {
         return name;
