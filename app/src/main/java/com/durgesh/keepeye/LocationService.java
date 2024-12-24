@@ -88,6 +88,7 @@ public class LocationService extends Service {
     }
 
     private void listenForLocationUpdates(String myId) {
+
         listenerRegistration = db.collection("users").document(myId)
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) {
@@ -101,6 +102,7 @@ public class LocationService extends Service {
                         }
                     }
                 });
+
     }
 
     private void sendNotification(String title, String message) {

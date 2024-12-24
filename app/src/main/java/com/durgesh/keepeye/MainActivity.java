@@ -50,14 +50,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
+        String userid2= sp.getString("user_id","0");
         try{
             Intent serviceIntent = new Intent(this, LocationService.class);
             serviceIntent.setAction("ACTION_LISTEN_UPDATES");
-            serviceIntent.putExtra("myId", getnamefunco.getCurrentUserId());
+            serviceIntent.putExtra("myId",userid2);
             startService(serviceIntent);
         }catch (Exception e){
-
+            Log.d("TAG", "onCreate: "+e.getMessage());
         }
 
 
