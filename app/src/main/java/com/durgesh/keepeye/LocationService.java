@@ -96,9 +96,12 @@ public class LocationService extends Service {
                         return;
                     }
                     if (snapshot != null && snapshot.exists()) {
-                        Object location = snapshot.get("location");
-                        if (location != null) {
-                            sendNotification("Location Update", "Your location has been updated!");
+                        boolean isLocalChange = snapshot.getMetadata().hasPendingWrites(); // Check if this is a local change
+                        if (!isLocalChange) { // Ignore local changes
+                            Object location = snapshot.get("location");
+                            if (location != null) {
+                                sendNotification("Location Update", "Your location has been updated!");
+                            }
                         }
                     }
                 });

@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -44,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
     SharedPreferences sharedPreferences;
     FirebaseFirestore db3 = FirebaseFirestore.getInstance();
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
-
+    Context context=MainActivity.this;
     private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,12 +124,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean hasLocationPermissions() {
-
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
          ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
-
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -192,7 +192,14 @@ public class MainActivity extends AppCompatActivity {
                     Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
                     sendLocationIntent.setAction("ACTION_SEND_LOCATION");
                     sendLocationIntent.putExtra("friendId", idTextView.getText().toString());
-                    startService(sendLocationIntent);
+//                    startService(sendLocationIntent);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService ( sendLocationIntent );
+                    } else {
+                        startService ( sendLocationIntent );
+                    }
+
+
                 }
             });
 
