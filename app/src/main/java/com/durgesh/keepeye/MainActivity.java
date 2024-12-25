@@ -39,7 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    Button fab;
+    Button fab, btnservice;
     EditText thisname;
     String friendname;
     TextView thisid, thisid2;
@@ -55,26 +55,75 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
         String userid2= sp.getString("user_id","0");
+
+        thisname = findViewById(R.id.thisableName);
+        thisid = findViewById(R.id.thisid);
+        fab = findViewById(R.id.fab);
+        btnservice=findViewById(R.id.servicebutt);
+        thisid2 = findViewById(R.id.thisidcopy);
+
+
+        Intent intent = new Intent(this, LocationService.class);
+        intent.setAction("ACTION_LISTEN_TRACKING_REQUESTS");
+        intent.putExtra("myId", userid2);
         try{
 
-            Intent intent = new Intent(this, LocationService.class);
-            intent.setAction("ACTION_LISTEN_TRACKING_REQUESTS");
-            intent.putExtra("myId", userid2); // Replace with the logged-in user's ID
+           // Replace with the logged-in user's ID
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
                 startForegroundService(intent);
+                getSharedPreferences("app_prefs", MODE_PRIVATE)
+                        .edit()
+                        .putString("serstatus", "1").apply();
+                btnservice.setText("Stop Service");
             } else {
                 startService(intent);
+                getSharedPreferences("app_prefs", MODE_PRIVATE)
+                        .edit()
+                        .putString("serstatus", "1").apply();
+                btnservice.setText("Stop Service");
             }
+
         }catch (Exception e){
 
             Log.d("TAG", "onCreate: "+e.getMessage());
         }
 
 
-        thisname = findViewById(R.id.thisableName);
-        thisid = findViewById(R.id.thisid);
-        fab = findViewById(R.id.fab);
-        thisid2 = findViewById(R.id.thisidcopy);
+
+
+        btnservice.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
+                String serstatus= sp.getString("serstatus","1");
+
+                if (serstatus.equals("1")) {
+                    stopService(intent);
+                    getSharedPreferences("app_prefs", MODE_PRIVATE)
+                            .edit()
+                            .putString("serstatus", "0").apply();
+                    Toast.makeText(MainActivity.this, "Service Stopped", Toast.LENGTH_SHORT).show();
+                    btnservice.setText("Start Service");
+
+                }else if (serstatus.equals("0")){
+
+                    btnservice.setText("Stop Service");
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+                        startForegroundService(intent);
+                    } else {
+                        startService(intent);
+                    }
+                    Toast.makeText(MainActivity.this, "Service Started", Toast.LENGTH_SHORT).show();
+
+                    getSharedPreferences("app_prefs", MODE_PRIVATE)
+                            .edit()
+                            .putString("serstatus", "1").apply();
+
+                }
+            }
+        });
+
 
         // Request permissions
         if (!hasLocationPermissions()) {
@@ -89,8 +138,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Set FAB action
         fab.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, addingmobile.class);
-            startActivity(intent);
+            Intent i = new Intent(MainActivity.this, addingmobile.class);
+            startActivity(i);
         });
 
         // Restore and display user ID

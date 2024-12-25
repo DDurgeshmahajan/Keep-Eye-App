@@ -119,6 +119,7 @@ public class first_screen_name extends AppCompatActivity {
                 .putString("user_id", documentId)
                 .putString("log","1")
                 .putString("namethis",editText.getText().toString())
+                .putString("serstatus","1")
                 .apply();
         Toast.makeText(this, "Name Saved ! ", Toast.LENGTH_SHORT).show();
         

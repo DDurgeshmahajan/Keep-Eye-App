@@ -7,7 +7,6 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Handler;
 import android.os.IBinder;
@@ -16,7 +15,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -24,17 +22,15 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class LocationService extends Service {
 
@@ -91,7 +87,7 @@ public class LocationService extends Service {
         FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         LocationRequest locationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(15000); // 50 seconds
+                .setInterval(5*60000); // 50 seconds
 
 
             locationCallback = new LocationCallback() {
@@ -130,17 +126,12 @@ public class LocationService extends Service {
                                                         }
 
                                                         if (snapshot != null && snapshot.exists()) {
-
                                                             String triggerValue = (String) snapshot.get("trigger");
-
                                                             if (triggerValue != null && !triggerValue.equals("")) {
                                                                 Log.d(TAG, "Trigger field is true. Perform action here.");
-
                                                                 // Perform your action when the trigger is true
-
                                                                 SharedPreferences sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE);
                                                                 String friendsJson = sharedPreferences.getString("friends", "[]");
-
 // Convert the JSON string into a JSONArray
                                                                 try {
                                                                     JSONArray friendsArray = new JSONArray(friendsJson);
@@ -156,9 +147,13 @@ public class LocationService extends Service {
 
                                                                             // Now send the notification with the friend's name
                                                                              sendNotification(friendName, " is " + triggerValue + " far from you");
-
+                                                                            if(Float.parseFloat(triggerValue)<30){
+                                                                                stopHandler2.
+                                                                                        postDelayed(Objects.requireNonNull(stopDistanceCalculation2()), 1000);
+                                                                            }
                                                                             break; // Exit the loop once the friend is found
                                                                         }
+
 
                                                                     }
 
@@ -196,11 +191,12 @@ public class LocationService extends Service {
 //        stopHandler2.postDelayed(this::stopDistanceCalculation2, 30000);
 
     }
-    private void stopDistanceCalculation2() {
+    private Runnable stopDistanceCalculation2() {
         if (locationClient != null && locationCallback != null) {
             locationClient.removeLocationUpdates(locationCallback);
             Log.d("TAG", "Location updates stopped");
         }
+        return null;
     }
 
     private Notification createNotification(String contentText) {
@@ -313,11 +309,12 @@ public class LocationService extends Service {
                         } else {
                             distanceString = String.format("%.2f m", distance); // Keep in meters with 2 decimal places
                         }
+
                         db.collection("users").document(myID)
                                 .collection("trackingRequests")
                                 .document(trackerId).update("trigger", distanceString);
 
-                        sendNotification("Distance Alert", "Distance from " + trackerId + ": " + distance + " meters");
+//                        sendNotification("Distance Alert", "Distance from " + trackerId + ": " + distance + " meters");
                     });
                 }
             }
