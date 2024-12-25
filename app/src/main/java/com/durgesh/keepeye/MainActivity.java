@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
@@ -26,6 +27,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -180,28 +182,36 @@ public class MainActivity extends AppCompatActivity {
 
             View cardView = LayoutInflater.from(this).inflate(R.layout.friend_card_view, container, false);
 
-            EditText nameEditText = cardView.findViewById(R.id.ableName);
+            TextView nameEditText = cardView.findViewById(R.id.ableName);
             TextView idTextView = cardView.findViewById(R.id.thisid1);
             Button watchButton = cardView.findViewById(R.id.btnWatch);
             Button notifyButton = cardView.findViewById(R.id.btnnotify);
             watchButton.setOnClickListener(v -> {
                 // Watch button functionality
             });
-//            notifyButton.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//
-//                    Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
-//                    sendLocationIntent.setAction("ACTION_SEND_LOCATION");
-//                    sendLocationIntent.putExtra("friendId", idTextView.getText().toString());
-////                    startService(sendLocationIntent);
-//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                        startForegroundService ( sendLocationIntent );
-//                    } else {
-//                        startService ( sendLocationIntent );
-//                    }
-//                }
-//            });
+
+            notifyButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    String receiverId = idTextView.getText().toString(); // The user being tracked
+                    String trackerId = FirebaseAuth.getInstance().getCurrentUser().getUid(); // Current user ID
+
+
+
+                    Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
+                    sendLocationIntent.setAction("ACTION_SEND_LOCATION");
+                    sendLocationIntent.putExtra("friendId", idTextView.getText().toString());
+//                    startService(sendLocationIntent);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+                        startForegroundService(sendLocationIntent);
+                    } else {
+                        startService(sendLocationIntent);
+                    }
+
+                }
+            });
+
 
             cardView.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
@@ -212,18 +222,17 @@ public class MainActivity extends AppCompatActivity {
             });
 
             nameEditText.setText(friend.getName());
-            idTextView.setText("ID: " + friend.getId());
-
-            container.addView(cardView);
 
             nameEditText.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                   showEditNameDialog(friend,nameEditText);
+                    showEditNameDialog(friend,nameEditText);
                 }
             });
+            idTextView.setText("ID: " + friend.getId());
 
 
+            container.addView(cardView);
 
         }
     }

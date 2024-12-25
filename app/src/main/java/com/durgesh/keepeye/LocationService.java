@@ -19,6 +19,8 @@ import com.google.android.gms.location.LocationServices;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
+import java.util.HashSet;
+import java.util.Set;
 
 public class LocationService extends Service {
 
@@ -28,6 +30,7 @@ public class LocationService extends Service {
     private FusedLocationProviderClient locationClient;
     private FirebaseFirestore db;
     private ListenerRegistration listenerRegistration;
+    private Set<String> trackers = new HashSet<>(); // Trackers who want to track you
 
     @Override
     public void onCreate() {
@@ -48,6 +51,10 @@ public class LocationService extends Service {
             } else if ("ACTION_LISTEN_UPDATES".equals(action)) {
                 String myId = intent.getStringExtra("myId");
                 listenForLocationUpdates(myId);
+            } else if ("ACTION_LISTEN_PROXIMITY".equals(action)) {
+                String trackerId = intent.getStringExtra("trackerId");
+                String trackeeId = intent.getStringExtra("trackeeId");
+                listenForProximityUpdates(trackerId, trackeeId);
             }
         }
         return START_STICKY;
@@ -88,7 +95,6 @@ public class LocationService extends Service {
     }
 
     private void listenForLocationUpdates(String myId) {
-
         listenerRegistration = db.collection("users").document(myId)
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) {
@@ -96,17 +102,75 @@ public class LocationService extends Service {
                         return;
                     }
                     if (snapshot != null && snapshot.exists()) {
-                        boolean isLocalChange = snapshot.getMetadata().hasPendingWrites(); // Check if this is a local change
-                        boolean isLocalChange2 = snapshot.getMetadata().isFromCache(); // Check if this is a local change
-                        if (isLocalChange && isLocalChange2) { // Ignore local changes
-                            Object location = snapshot.get("location");
-                            if (location != null) {
-                                sendNotification("Location Update", "Your location has been updated!");
+                        Object trackersField = snapshot.get("trackers");
+                        if (trackersField instanceof Set<?>) {
+                            trackers.clear();
+                            trackers.addAll((Set<String>) trackersField);
+                            Log.d(TAG, "Updated trackers: " + trackers);
+
+                            for (String trackerId : trackers) {
+                                sendNotification("Tracker Alert", "User " + trackerId + " is tracking you.");
+                                checkDistanceToTracker(trackerId);
                             }
                         }
                     }
                 });
+    }
 
+    private void listenForProximityUpdates(String trackerId, String trackeeId) {
+        db.collection("users").document(trackeeId)
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.e(TAG, "Failed to listen for updates", e);
+                        return;
+                    }
+                    if (snapshot != null && snapshot.exists()) {
+                        Map<String, Object> location = (Map<String, Object>) snapshot.get("location");
+                        if (location != null) {
+                            double trackeeLat = (double) location.get("latitude");
+                            double trackeeLon = (double) location.get("longitude");
+
+                            // Fetch tracker's location
+                            locationClient.getLastLocation().addOnSuccessListener(trackerLocation -> {
+                                if (trackerLocation != null) {
+                                    double trackerLat = trackerLocation.getLatitude();
+                                    double trackerLon = trackerLocation.getLongitude();
+
+                                    // Calculate distance
+                                    float[] results = new float[1];
+                                    Location.distanceBetween(trackerLat, trackerLon, trackeeLat, trackeeLon, results);
+                                    float distanceInMeters = results[0];
+
+                                    // Notify if within proximity (e.g., 100 meters)
+                                    if (distanceInMeters <= 100) {
+                                        sendNotification("Proximity Alert", "Trackee is within 100 meters!");
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+    }
+    private void checkDistanceToTracker(String trackerId) {
+        db.collection("users").document(trackerId).get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                double trackerLat = documentSnapshot.getDouble("location.latitude");
+                double trackerLon = documentSnapshot.getDouble("location.longitude");
+
+                locationClient.getLastLocation().addOnSuccessListener(location -> {
+                    if (location != null) {
+                        float[] results = new float[1];
+                        Location.distanceBetween(location.getLatitude(), location.getLongitude(), trackerLat, trackerLon, results);
+                        float distance = results[0];
+                        Log.d(TAG, "Distance to " + trackerId + ": " + distance + " meters");
+
+                        if (distance < 100) { // Notify if within 100 meters
+                            sendNotification("Distance Alert", "User " + trackerId + " is within 100 meters!");
+                        }
+                    }
+                });
+            }
+        });
     }
 
     private void sendNotification(String title, String message) {
@@ -135,4 +199,3 @@ public class LocationService extends Service {
         return null;
     }
 }
-
