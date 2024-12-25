@@ -80,7 +80,10 @@ public class first_screen_name extends AppCompatActivity {
         Map<String, Object> userData = new HashMap<>();
         userData.put("name", userName);
         FirebaseFirestore db;
+        FirebaseFirestore.getInstance().clearPersistence();
+
         db = FirebaseFirestore.getInstance();
+
         // Get current date and time
         String currentDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
         userData.put("loginDate", currentDate);

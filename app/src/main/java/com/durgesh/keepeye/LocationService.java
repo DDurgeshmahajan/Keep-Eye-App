@@ -7,7 +7,9 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -15,22 +17,31 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 public class LocationService extends Service {
+
 
     private static final String TAG = "LocationService";
     private static final String CHANNEL_ID = "LocationServiceChannel";
 
     private FusedLocationProviderClient locationClient;
     private FirebaseFirestore db;
-    private ListenerRegistration listenerRegistration;
-    private Set<String> trackers = new HashSet<>(); // Trackers who want to track you
+
+    private static final long CALCULATION_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
+    private Map<String, Location> trackingRequests = new HashMap<>();
+    private LocationCallback locationCallback;
+    private boolean isCalculating = false;
+
+    private Handler stopHandler;
 
     @Override
     public void onCreate() {
@@ -38,24 +49,17 @@ public class LocationService extends Service {
         createNotificationChannel();
         locationClient = LocationServices.getFusedLocationProviderClient(this);
         db = FirebaseFirestore.getInstance();
-        startForeground(1, createNotification("Location Service Running"));
+        stopHandler = new Handler(Looper.getMainLooper());
+        startForeground(1, createNotification("Listening for tracking requests"));
     }
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null) {
-            String action = intent.getAction();
-            if ("ACTION_SEND_LOCATION".equals(action)) {
-                String friendId = intent.getStringExtra("friendId");
-                sendCurrentLocation(friendId);
-            } else if ("ACTION_LISTEN_UPDATES".equals(action)) {
-                String myId = intent.getStringExtra("myId");
-                listenForLocationUpdates(myId);
-            } else if ("ACTION_LISTEN_PROXIMITY".equals(action)) {
-                String trackerId = intent.getStringExtra("trackerId");
-                String trackeeId = intent.getStringExtra("trackeeId");
-                listenForProximityUpdates(trackerId, trackeeId);
-            }
+
+        if (intent != null && "ACTION_LISTEN_TRACKING_REQUESTS".equals(intent.getAction())) {
+            String myId = intent.getStringExtra("myId");
+            listenForTrackingRequests(myId);
         }
         return START_STICKY;
     }
@@ -80,117 +84,131 @@ public class LocationService extends Service {
         }
     }
 
-    private void sendCurrentLocation(String friendId) {
-        locationClient.getLastLocation().addOnSuccessListener(location -> {
-            if (location != null) {
-                double latitude = location.getLatitude();
-                double longitude = location.getLongitude();
+    private void listenForTrackingRequests(String myId) {
 
-                db.collection("users").document(friendId)
-                        .update("location.latitude", latitude, "location.longitude", longitude)
-                        .addOnSuccessListener(aVoid -> Log.d(TAG, "Location sent to friend's document"))
-                        .addOnFailureListener(e -> Log.e(TAG, "Failed to send location", e));
+        db.collection("users").document(myId)
+                .collection("trackingRequests")
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.e(TAG, "Failed to listen for tracking requests", e);
+                        return;
+                    }
+
+                    if (snapshot != null && !snapshot.isEmpty()) {
+                        // Update tracking requests when changes occur
+                        Map<String, Location> updatedRequests = new HashMap<>();
+                        snapshot.getDocuments().forEach(document -> {
+                            String trackerId = document.getId();
+                            double trackerLat = document.getDouble("latitude");
+                            double trackerLon = document.getDouble("longitude");
+
+                            Location trackerLocation = new Location("Tracker");
+                            trackerLocation.setLatitude(trackerLat);
+                            trackerLocation.setLongitude(trackerLon);
+
+                            updatedRequests.put(trackerId, trackerLocation);
+                        });
+                        if (hasTrackingRequestsChanged(updatedRequests)) {
+                            trackingRequests = updatedRequests;
+                            startDistanceCalculation();
+                        }
+//                        if (!trackingRequests.equals(updatedRequests)) {
+//                            trackingRequests = updatedRequests;
+//                            startDistanceCalculation();
+//                        }
+                    } else {
+                        stopDistanceCalculation();
+                    }
+                });
+    }
+
+    private boolean hasTrackingRequestsChanged(Map<String, Location> newRequests) {
+        if (trackingRequests.size() != newRequests.size()) return true;
+        for (String key : newRequests.keySet()) {
+            if (!trackingRequests.containsKey(key)) return true;
+
+            Location oldLoc = trackingRequests.get(key);
+            Location newLoc = newRequests.get(key);
+
+            if (oldLoc.getLatitude() != newLoc.getLatitude() ||
+                    oldLoc.getLongitude() != newLoc.getLongitude()) {
+                return true;
             }
-        });
+        }
+
+        return false;
     }
 
-    private void listenForLocationUpdates(String myId) {
-        listenerRegistration = db.collection("users").document(myId)
-                .addSnapshotListener((snapshot, e) -> {
-                    if (e != null) {
-                        Log.e(TAG, "Failed to listen for updates", e);
-                        return;
-                    }
-                    if (snapshot != null && snapshot.exists()) {
-                        Object trackersField = snapshot.get("trackers");
-                        if (trackersField instanceof Set<?>) {
-                            trackers.clear();
-                            trackers.addAll((Set<String>) trackersField);
-                            Log.d(TAG, "Updated trackers: " + trackers);
 
-                            for (String trackerId : trackers) {
-                                sendNotification("Tracker Alert", "User " + trackerId + " is tracking you.");
-                                checkDistanceToTracker(trackerId);
-                            }
-                        }
-                    }
-                });
-    }
+    private void startDistanceCalculation() {
+        if (isCalculating) return; // Prevent duplicate calculations
+        isCalculating = true;
 
-    private void listenForProximityUpdates(String trackerId, String trackeeId) {
-        db.collection("users").document(trackeeId)
-                .addSnapshotListener((snapshot, e) -> {
-                    if (e != null) {
-                        Log.e(TAG, "Failed to listen for updates", e);
-                        return;
-                    }
-                    if (snapshot != null && snapshot.exists()) {
-                        Map<String, Object> location = (Map<String, Object>) snapshot.get("location");
-                        if (location != null) {
-                            double trackeeLat = (double) location.get("latitude");
-                            double trackeeLon = (double) location.get("longitude");
+        LocationRequest locationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(5000); // 5 seconds
 
-                            // Fetch tracker's location
-                            locationClient.getLastLocation().addOnSuccessListener(trackerLocation -> {
-                                if (trackerLocation != null) {
-                                    double trackerLat = trackerLocation.getLatitude();
-                                    double trackerLon = trackerLocation.getLongitude();
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) return;
 
-                                    // Calculate distance
-                                    float[] results = new float[1];
-                                    Location.distanceBetween(trackerLat, trackerLon, trackeeLat, trackeeLon, results);
-                                    float distanceInMeters = results[0];
-
-                                    // Notify if within proximity (e.g., 100 meters)
-                                    if (distanceInMeters <= 100) {
-                                        sendNotification("Proximity Alert", "Trackee is within 100 meters!");
-                                    }
-                                }
-                            });
-                        }
-                    }
-                });
-    }
-    private void checkDistanceToTracker(String trackerId) {
-        db.collection("users").document(trackerId).get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                double trackerLat = documentSnapshot.getDouble("location.latitude");
-                double trackerLon = documentSnapshot.getDouble("location.longitude");
-
-                locationClient.getLastLocation().addOnSuccessListener(location -> {
-                    if (location != null) {
+                Location currentLocation = locationResult.getLastLocation();
+                if (currentLocation != null) {
+                    trackingRequests.forEach((trackerId, trackerLocation) -> {
                         float[] results = new float[1];
-                        Location.distanceBetween(location.getLatitude(), location.getLongitude(), trackerLat, trackerLon, results);
-                        float distance = results[0];
-                        Log.d(TAG, "Distance to " + trackerId + ": " + distance + " meters");
+                        Location.distanceBetween(
+                                currentLocation.getLatitude(),
+                                currentLocation.getLongitude(),
+                                trackerLocation.getLatitude(),
+                                trackerLocation.getLongitude(),
+                                results
+                        );
 
-                        if (distance < 100) { // Notify if within 100 meters
-                            sendNotification("Distance Alert", "User " + trackerId + " is within 100 meters!");
-                        }
-                    }
-                });
+                        float distance = results[0];
+                        snapshot.getMetadata().isFromCache()
+//                        sendNotification("Distance Alert",
+//                                "Distance from " + trackerId + ": " + distance + " meters");
+                    });
+                }
             }
-        });
+        };
+
+        locationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+
+        // Stop calculation after 10 minutes
+        stopHandler.postDelayed(this::stopDistanceCalculation, CALCULATION_DURATION);
+
     }
+
+    private void stopDistanceCalculation() {
+        if (!isCalculating) return;
+        isCalculating = false;
+
+        if (locationClient != null && locationCallback != null) {
+            locationClient.removeLocationUpdates(locationCallback);
+            locationCallback = null;
+        }
+
+        stopHandler.removeCallbacksAndMessages(null); // Clear any pending stop actions
+        Log.d(TAG, "Distance calculation stopped.");
+    }
+
+
 
     private void sendNotification(String title, String message) {
+
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .build();
+
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (manager != null) {
             manager.notify((int) System.currentTimeMillis(), notification);
         }
-    }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (listenerRegistration != null) {
-            listenerRegistration.remove();
-        }
     }
 
     @Nullable
@@ -198,4 +216,11 @@ public class LocationService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        stopDistanceCalculation(); // Ensure location updates are stopped when service is destroyed
+    }
+
 }

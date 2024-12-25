@@ -56,11 +56,17 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
         String userid2= sp.getString("user_id","0");
         try{
-            Intent serviceIntent = new Intent(this, LocationService.class);
-            serviceIntent.setAction("ACTION_LISTEN_UPDATES");
-            serviceIntent.putExtra("myId",userid2);
-            startService(serviceIntent);
+
+            Intent intent = new Intent(this, LocationService.class);
+            intent.setAction("ACTION_LISTEN_TRACKING_REQUESTS");
+            intent.putExtra("myId", userid2); // Replace with the logged-in user's ID
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+                startForegroundService(intent);
+            } else {
+                startService(intent);
+            }
         }catch (Exception e){
+
             Log.d("TAG", "onCreate: "+e.getMessage());
         }
 
@@ -195,19 +201,37 @@ public class MainActivity extends AppCompatActivity {
                 public void onClick(View v) {
 
                     String receiverId = idTextView.getText().toString(); // The user being tracked
-                    String trackerId = FirebaseAuth.getInstance().getCurrentUser().getUid(); // Current user ID
 
 
-
-                    Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
-                    sendLocationIntent.setAction("ACTION_SEND_LOCATION");
-                    sendLocationIntent.putExtra("friendId", idTextView.getText().toString());
-//                    startService(sendLocationIntent);
+                    Intent intent = new Intent(MainActivity.this, LocationService.class);
+                    intent.setAction("ACTION_SEND_TRACKING_REQUEST");
+                    intent.putExtra("friendId", receiverId);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-                        startForegroundService(sendLocationIntent);
+                        startForegroundService(intent);
                     } else {
-                        startService(sendLocationIntent);
+                        startService(intent);
                     }
+
+                    Intent listenIntent = new Intent(MainActivity.this, LocationService.class);
+                    listenIntent.setAction("ACTION_LISTEN_NOTIFICATIONS");
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+                        startForegroundService(listenIntent);
+                    } else {
+                        startService(listenIntent);
+                    }
+
+
+
+//
+//                    Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
+//                    sendLocationIntent.setAction("ACTION_SEND_LOCATION");
+//                    sendLocationIntent.putExtra("friendId", idTextView.getText().toString());
+////                    startService(sendLocationIntent);
+//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+//                        startForegroundService(sendLocationIntent);
+//                    } else {
+//                        startService(sendLocationIntent);
+//                    }
 
                 }
             });
