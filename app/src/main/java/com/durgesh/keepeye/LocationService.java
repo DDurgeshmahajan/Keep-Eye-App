@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -21,6 +22,7 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
@@ -32,11 +34,11 @@ public class LocationService extends Service {
 
     private static final String TAG = "LocationService";
     private static final String CHANNEL_ID = "LocationServiceChannel";
-
+    int counter=0;
     private FusedLocationProviderClient locationClient;
     private FirebaseFirestore db;
-
-    private static final long CALCULATION_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
+//10 * 60 * 1000
+    private static final long CALCULATION_DURATION = 15000; // 10 minutes in milliseconds
     private Map<String, Location> trackingRequests = new HashMap<>();
     private LocationCallback locationCallback;
     private boolean isCalculating = false;
@@ -57,11 +59,54 @@ public class LocationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if (intent != null && "ACTION_LISTEN_TRACKING_REQUESTS".equals(intent.getAction())) {
-            String myId = intent.getStringExtra("myId");
-            listenForTrackingRequests(myId);
+        if (intent != null) {
+            String action = intent.getAction();
+            if ("ACTION_LISTEN_TRACKING_REQUESTS".equals(action)) {
+                String myId = intent.getStringExtra("myId");
+                listenForTrackingRequests(myId);
+            } else if ("ACTION_PUT_READ".equals(action)) {
+                String myId = intent.getStringExtra("myId");
+                String friendid = intent.getStringExtra("friendId");
+                sendLocationToTrackee(myId,friendid);
+            }
         }
         return START_STICKY;
+
+    }
+
+    private void sendLocationToTrackee(String myId, String friendid) {
+
+        Toast.makeText(this, ""+myId, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, ""+friendid, Toast.LENGTH_SHORT).show();
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) return;
+                Location currentLocation = locationResult.getLastLocation();
+                if (currentLocation != null) {
+
+                    double latitude = currentLocation.getLatitude();
+                    double longitude = currentLocation.getLongitude();
+
+                    Map<String, Object> trackingData = new HashMap<>();
+                    trackingData.put("latitude", latitude);
+                    trackingData.put("longitude", longitude);
+                    trackingData.put("trigger", false);
+
+                    db.collection("users").document(friendid)
+                            .collection("trackingRequests")
+                            .document(myId)
+                            .set(trackingData)
+                            .addOnSuccessListener(aVoid -> Log.d(TAG, "Location sent successfully"))
+                            .addOnFailureListener(e -> Log.e("TAG", "Failed to send location", e));
+                }
+                else{
+                    Log.d(TAG, "Location is null");
+                }
+            }
+        };
+
+
     }
 
     private Notification createNotification(String contentText) {
@@ -94,7 +139,7 @@ public class LocationService extends Service {
                         return;
                     }
 
-                    if (snapshot != null && !snapshot.isEmpty()) {
+                    if (snapshot != null && !snapshot.isEmpty() && !snapshot.getMetadata().hasPendingWrites() && !snapshot.getMetadata().isFromCache()) {
                         // Update tracking requests when changes occur
                         Map<String, Location> updatedRequests = new HashMap<>();
                         snapshot.getDocuments().forEach(document -> {
@@ -112,10 +157,14 @@ public class LocationService extends Service {
                             trackingRequests = updatedRequests;
                             startDistanceCalculation();
                         }
-//                        if (!trackingRequests.equals(updatedRequests)) {
-//                            trackingRequests = updatedRequests;
-//                            startDistanceCalculation();
-//                        }
+
+                        if (!trackingRequests.equals(updatedRequests) && counter!=0 ) {
+                            trackingRequests = updatedRequests;
+                            startDistanceCalculation();
+
+                        }
+
+                        counter++;
                     } else {
                         stopDistanceCalculation();
                     }
@@ -135,7 +184,6 @@ public class LocationService extends Service {
                 return true;
             }
         }
-
         return false;
     }
 
@@ -152,7 +200,6 @@ public class LocationService extends Service {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult == null) return;
-
                 Location currentLocation = locationResult.getLastLocation();
                 if (currentLocation != null) {
                     trackingRequests.forEach((trackerId, trackerLocation) -> {
@@ -164,17 +211,15 @@ public class LocationService extends Service {
                                 trackerLocation.getLongitude(),
                                 results
                         );
-
                         float distance = results[0];
-                        snapshot.getMetadata().isFromCache()
-//                        sendNotification("Distance Alert",
-//                                "Distance from " + trackerId + ": " + distance + " meters");
+//
+//                        sendNotification("Distance Alert", "Distance from " + trackerId + ": " + distance + " meters");
                     });
                 }
             }
         };
 
-        locationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+        locationClient.requestLocationUpdates( locationRequest, locationCallback , Looper.getMainLooper() );
 
         // Stop calculation after 10 minutes
         stopHandler.postDelayed(this::stopDistanceCalculation, CALCULATION_DURATION);
@@ -191,7 +236,7 @@ public class LocationService extends Service {
         }
 
         stopHandler.removeCallbacksAndMessages(null); // Clear any pending stop actions
-        Log.d(TAG, "Distance calculation stopped.");
+        Log.d("TAG", "Distance calculation stopped.");
     }
 
 

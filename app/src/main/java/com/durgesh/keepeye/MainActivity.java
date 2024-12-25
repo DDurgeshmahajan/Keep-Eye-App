@@ -201,37 +201,20 @@ public class MainActivity extends AppCompatActivity {
                 public void onClick(View v) {
 
                     String receiverId = idTextView.getText().toString(); // The user being tracked
+                    receiverId= receiverId.substring(4);
+                    SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
+                    String userid2= sp.getString("user_id","0");
 
-
-                    Intent intent = new Intent(MainActivity.this, LocationService.class);
-                    intent.setAction("ACTION_SEND_TRACKING_REQUEST");
-                    intent.putExtra("friendId", receiverId);
+                    Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
+                    sendLocationIntent.setAction("ACTION_PUT_READ");
+                    sendLocationIntent.putExtra("friendId",receiverId);
+                    sendLocationIntent.putExtra("myId",userid2 );
+//                    startService(sendLocationIntent);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-                        startForegroundService(intent);
+                        startForegroundService(sendLocationIntent);
                     } else {
-                        startService(intent);
+                        startService(sendLocationIntent);
                     }
-
-                    Intent listenIntent = new Intent(MainActivity.this, LocationService.class);
-                    listenIntent.setAction("ACTION_LISTEN_NOTIFICATIONS");
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-                        startForegroundService(listenIntent);
-                    } else {
-                        startService(listenIntent);
-                    }
-
-
-
-//
-//                    Intent sendLocationIntent = new Intent(MainActivity.this, LocationService.class);
-//                    sendLocationIntent.setAction("ACTION_SEND_LOCATION");
-//                    sendLocationIntent.putExtra("friendId", idTextView.getText().toString());
-////                    startService(sendLocationIntent);
-//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-//                        startForegroundService(sendLocationIntent);
-//                    } else {
-//                        startService(sendLocationIntent);
-//                    }
 
                 }
             });
