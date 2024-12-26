@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -47,6 +48,7 @@ public class LocationService extends Service {
     private LocationCallback locationCallback;
     private boolean isCalculating = false;
     private Handler stopHandler;
+    int i500=0,i300=0,i200=0,i100=0,i50=0;
 
     private  Handler stopHandler2;
     Context context;
@@ -88,7 +90,6 @@ public class LocationService extends Service {
         LocationRequest locationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
                 .setInterval(5*60000); // 50 seconds
-
 
             locationCallback = new LocationCallback() {
                 @Override
@@ -145,15 +146,38 @@ public class LocationService extends Service {
                                                                         if (friendObject.has("id") && friendObject.getString("id").equals(friendid)) {
                                                                             String friendName = friendObject.getString("name");
 
-                                                                            // Now send the notification with the friend's name
-                                                                             sendNotification(friendName, " is " + triggerValue + " far from you");
+                                                                            if(Float.parseFloat(triggerValue)<=500 && Float.parseFloat(triggerValue)>300 && i500==0){
+
+                                                                                sendNotification("Your "+friendName, " is " + triggerValue + " far from you");
+                                                                                i500++;
+
+                                                                            }else if( Float.parseFloat(triggerValue)<=300 && Float.parseFloat(triggerValue)>200 && i300==0){
+
+                                                                                sendNotification("Your "+friendName, " is " + triggerValue + " far from you");
+                                                                                i300++;
+
+                                                                            }else if( Float.parseFloat(triggerValue)<=200 && Float.parseFloat(triggerValue)>100 && i200==0){
+
+                                                                                sendNotification("Your "+friendName, " is " + triggerValue + " far from you");
+                                                                                i200++;
+
+                                                                            }else if( Float.parseFloat(triggerValue)<=100 && Float.parseFloat(triggerValue)>50 && i100==0){
+
+                                                                                sendNotification("Your "+friendName, " is " + triggerValue + " far from you");
+                                                                                i100++;
+                                                                            }else if( Float.parseFloat(triggerValue)<=50 && i50==0){
+
+                                                                                sendNotification("Your "+friendName, " is " + triggerValue + " far from you");
+                                                                                i50++;
+                                                                            }
+
                                                                             if(Float.parseFloat(triggerValue)<30){
+
                                                                                 stopHandler2.
                                                                                         postDelayed(Objects.requireNonNull(stopDistanceCalculation2()), 1000);
                                                                             }
                                                                             break; // Exit the loop once the friend is found
                                                                         }
-
 
                                                                     }
 
@@ -310,9 +334,13 @@ public class LocationService extends Service {
                             distanceString = String.format("%.2f m", distance); // Keep in meters with 2 decimal places
                         }
 
+
                         db.collection("users").document(myID)
                                 .collection("trackingRequests")
                                 .document(trackerId).update("trigger", distanceString);
+
+
+
 
 //                        sendNotification("Distance Alert", "Distance from " + trackerId + ": " + distance + " meters");
                     });
