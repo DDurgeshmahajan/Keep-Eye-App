@@ -12,6 +12,7 @@
 /app/google-services.json
 doc/**/*.json
 /captures
+/app/src/main/res/values/strings.xml
 .externalNativeBuild
 .cxx
 local.properties

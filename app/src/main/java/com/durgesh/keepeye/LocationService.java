@@ -171,7 +171,7 @@ public class LocationService extends Service {
                                                                                 i50++;
                                                                             }
 
-                                                                            if(Float.parseFloat(triggerValue)<30){
+                                                                            if(Float.parseFloat(triggerValue)<20){
 
                                                                                 stopHandler2.
                                                                                         postDelayed(Objects.requireNonNull(stopDistanceCalculation2()), 1000);
@@ -351,7 +351,7 @@ public class LocationService extends Service {
         locationClient.requestLocationUpdates( locationRequest, locationCallback , Looper.getMainLooper() );
 
         // Stop calculation after 10 minutes
-        stopHandler.postDelayed(this::stopDistanceCalculation, 2*60000);
+        stopHandler.postDelayed(this::stopDistanceCalculation, 10*60000);
 
     }
 

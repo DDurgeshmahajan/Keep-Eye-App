@@ -241,14 +241,22 @@ public class MainActivity extends AppCompatActivity {
             TextView idTextView = cardView.findViewById(R.id.thisid1);
             Button watchButton = cardView.findViewById(R.id.btnWatch);
             Button notifyButton = cardView.findViewById(R.id.btnnotify);
+            String receiverId = idTextView.getText().toString(); // The user being tracked
+           String  friendid= receiverId.substring(4);
+
             watchButton.setOnClickListener(v -> {
                 // Watch button functionality
+                Intent intent = new Intent(this, MapActivity.class);
+                intent.putExtra("friendId", friendid); // Pass friend's ID
+                startActivity(intent);
+
             });
 
             notifyButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
 
+                    Toast.makeText(MainActivity.this, "Looking For IT!!", Toast.LENGTH_SHORT).show();
                     String receiverId = idTextView.getText().toString(); // The user being tracked
                     receiverId= receiverId.substring(4);
                     SharedPreferences sp =  getSharedPreferences("app_prefs", MODE_PRIVATE);
